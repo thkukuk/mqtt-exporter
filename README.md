@@ -5,14 +5,14 @@
 This exporter listens to MQTT topics and stores them in an InfluxDB database. It takes the JSON message from the topics and translates this between the MQTT represenation and the format needed for database storage. How this translation is done is specified in the configuration file for mqtt-exporter, as you normally cannot adjust the messages IoT devices send. The IoT devices will push tehri metrics via MQTT to an MQTT Broker and this exporter subscribes to the broker and processes the rrecived messages.
 
 ```plaintext
- IoT Sensors -> publish -> MQTT Broker <- subcribed MQTT-Exporter -> stores -> InfluxDB
+ IoT Sensors -> publish -> MQTT Broker <- subcribed <- MQTT-Exporter -> stores -> InfluxDB
  ```
 
 I wrote this exporter initial to export the power metering values of my Shelly Plug S devices and make them visible in Grafana.
 
 ## Assumptions about Messages and Topics
 
-Currently this exporter only supports devices, which publish every metric in an own topic. For Shelly Plug S devices, the MQTT messages would look like:
+Currently the exporter only supports devices, which publish every metric in an own topic. For Shelly Plug S devices, the MQTT messages would look like:
 
 ```plaintext
 shellies/shelly-plug-s1/relay/0/power 20.58
