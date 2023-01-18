@@ -1,0 +1,53 @@
+mqtt:
+  # Required: The MQTT broker to connect to
+  broker: 172.17.0.1
+  # Optinal: Port of the MQTT broker
+  # port: 1883
+  # Optional: Username and Password for authenticating with the MQTT Server
+  #user: <username>
+  #password: <password>
+  # Optional: Used to specify ClientID. The default is <hostname>-<pid>
+  # client_id: somedevice
+  # The Topic path to subscribe to. Be aware that you have to specify the
+  # wildcard.
+  topic_path: shellies/#
+  # Optional: Regular expression to extract the device ID from the topic
+  # path. The default regular expression, assumes that the last "element"
+  # of the topic_path is the device id. The regular expression must contain
+  # a named capture group with the name deviceid. For example the
+  # expression for tasamota based sensors is "tele/(?P<deviceid>.*)/.*".
+  # The default is:
+  # device_id_regex: "(.*/)?(?P<deviceid>.*)"
+  device_id_regex: "shellies/(?P<deviceid>.*?)/.*"
+  # Optional: Expect a single metric to be published as the value on an
+  # mqtt topic. This regex is used to extract the metric name from the
+  # topic. Must contain a named group for `metricname`.
+  metric_per_topic_regex: "shellies/.*/(?P<metricname>.*)"
+  # The MQTT QoS level
+  qos: 0
+influxdb:
+  server: defiant.thkukuk.de
+  database: shellies
+db_mapping:
+  - mqtt_name: temperature
+    name: temperature
+    unit: C
+    type: float
+  - mqtt_name: power
+    name: power
+    unit: Watt
+    type: float
+  - mqtt_name: energy
+    name: energy
+    unit: Watt/Minute
+    type: int
+  - mqtt_name: 0
+    name: switch
+    # Optional: enables mapping between string values to metric values.
+    # type is ignored if string_value_mapping is specified
+    string_value_mapping:
+      map:
+        off: 0
+        low: 1
+        on: 2
+      error_value: -1
