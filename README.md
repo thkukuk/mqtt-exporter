@@ -56,7 +56,13 @@ devices/workshop/sensors/temperature
 
 ### Public Container Image
 
-XXX The build and setup of an public available image is WiP.
+To run the public available image:
+
+```bash
+podman run --rm -v <path>/config.yaml:/config.yaml registry.opensuse.org/home/kukuk/containerfile/mqtt-exporter
+```
+
+You can replace `podman` with `docker` without any further changes.
 
 ### Build locally
 
@@ -129,6 +135,11 @@ db_mapping:
     name: temperature
     unit: C
     type: float
+    # Optional: A map of strings for constant tags. This tags will always
+    # be attached
+    const_tags:
+      reliable: false
+      sensor: shelly-plug-s
   - mqtt_name: power
     name: power
     unit: Watt
