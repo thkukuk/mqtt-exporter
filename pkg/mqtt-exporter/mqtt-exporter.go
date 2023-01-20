@@ -113,7 +113,7 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 		Config.MQTT.QoS, msgHandler)
 
 	// the connection handler is called in a goroutine so blocking
-	//here would hot cause an issue. However as blocking in other
+	// here would hot cause an issue. However as blocking in other
 	// handlers does cause problems its best to just assume we should
 	// not block
 	go func() {
@@ -132,7 +132,7 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	logerr.Printf("Connect lost: %v", err)
+	logerr.Printf("Connection lost: %v", err)
 }
 
 func RunServer() {
@@ -140,9 +140,20 @@ func RunServer() {
 		logger.Printf("MQTT Exporter (mqtt-exporter) %s is starting...\n", Version)
 	}
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	signal.Notify(sig, syscall.SIGTERM)
+	var mqtt_client mqtt.Client
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	signal.Notify(quit, syscall.SIGTERM)
+
+	go func() {
+		<-quit
+		logger.Print("Terminated via Signal. Shutting down...")
+		if mqtt_client.IsConnectionOpen() {
+			mqtt_client.Disconnect(250)
+		}
+		os.Exit(0)
+	}()
 
 	var err error
 	deviceIDRegex, err = regexp.Compile(Config.MQTT.DeviceIDPattern)
@@ -216,8 +227,8 @@ func RunServer() {
         errorChan := make(chan error, 1)
 
         for {
-		client := mqtt.NewClient(opts)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
+		mqtt_client = mqtt.NewClient(opts)
+		if token := mqtt_client.Connect(); token.Wait() && token.Error() != nil {
 			logger.Printf("Could not connect to mqtt broker, sleep 10 second: %v", token.Error())
 			time.Sleep(10 * time.Second)
 		} else {
@@ -225,11 +236,10 @@ func RunServer() {
                 }
         }
 
+	// loop forever and print error messages if they arrive
+	// app is quit with above signal handler "quit".
 	for {
                 select {
-                case <-sig:
-                        logger.Print("Terminated via Signal. Stop.")
-                        os.Exit(0)
                 case err := <-errorChan:
                         logerr.Printf("Error while processing message: %v", err)
                 }
