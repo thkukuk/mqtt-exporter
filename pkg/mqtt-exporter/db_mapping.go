@@ -15,10 +15,13 @@
 package mqttExporter
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/eclipse/paho.mqtt.golang"
+	"github.com/thedevsaddam/gojsonq/v2"
 )
 
 const (
@@ -76,52 +79,90 @@ func msg2dbentry(dbmapping []InfluxDBMapping, msg mqtt.Message) (string, map[str
 			deviceID, metricName)
 	}
 
-	var field map[string]interface{}
+	var tags = make(map[string]string)
+	var field = make(map[string]interface{})
 	var err error
 
+	found := false
+
 	for i := range dbmapping {
-		if metricName != dbmapping[i].MqttName {
+		mqttName := dbmapping[i].MqttName
+		isJson := false
+
+		if strings.Contains(mqttName, ".") {
+			isJson = true
+			mqttName = mqttName[:strings.IndexByte(mqttName, '.')]
+		}
+
+		if metricName != mqttName {
 			continue
 		}
 		if len(dbmapping[i].Name) == 0 {
 			dbmapping[i].Name = dbmapping[i].MqttName
 		}
+
+		payload := string(msg.Payload())
+		if isJson {
+			// gojsonq.Find is of form "a.b.c.d", where "a" is
+			// the mqttName. So remove it, it's not part of the
+			// json struct
+			jsonFind := dbmapping[i].MqttName[(strings.IndexByte(dbmapping[i].MqttName, '.')+1):]
+			logger.Printf("jsonFind: %q - payload: '%s'", jsonFind, payload)
+			entry := gojsonq.New().FromString(payload).Find(jsonFind)
+			if entry == nil {
+				logerr.Printf("WARNING: %q not found in '%s'!", jsonFind, payload)
+				continue
+			}
+			payload = fmt.Sprintf("%v", entry)
+		}
+
 		if dbmapping[i].StringValueMapping != nil {
 			v := dbmapping[i].StringValueMapping.ErrorValue
 			for k := range dbmapping[i].StringValueMapping.Map {
-				if string(msg.Payload()[:]) == k {
+				if payload[:] == k {
 					v = dbmapping[i].StringValueMapping.Map[k]
 				}
 			}
-			field = map[string]interface{}{dbmapping[i].Name: v}
+			field[dbmapping[i].Name] = v
 		} else if dbmapping[i].Type == "float" {
 			var f float64
-			if f, err = strconv.ParseFloat(string(msg.Payload()[:]), 64); err != nil {
-				logerr.Printf("Cannot convert '%s' to float64: %v", msg.Payload(), err)
+			if f, err = strconv.ParseFloat(payload[:], 64); err != nil {
+				logerr.Printf("Cannot convert '%s' to float64: %v", payload, err)
 			} else {
-				field = map[string]interface{}{Config.DBMapping[i].Name: f}
+				field[Config.DBMapping[i].Name] = f
 			}
 		} else if dbmapping[i].Type == "int" {
 			var f int64
-			if f, err = strconv.ParseInt(string(msg.Payload()[:]), 10, 0); err != nil {
-				logerr.Printf("Cannot convert '%s' to int64: %v", msg.Payload(), err)
+			if f, err = strconv.ParseInt(payload[:], 10, 0); err != nil {
+				logerr.Printf("Cannot convert '%s' to int64: %v", payload, err)
 			} else {
-				field = map[string]interface{}{dbmapping[i].Name: f}
+				field[dbmapping[i].Name] = f
 			}
 		} else  if dbmapping[i].Type == "string" {
-			field = map[string]interface{}{dbmapping[i].Name: msg.Payload()}
+			field[dbmapping[i].Name] = payload
 		}
 
-		tags := make(map[string]string)
 		for v, k := range dbmapping[i].ConstantTags {
 			tags[k] = v
 		}
+
+		// XXX json structs and unit -> last one wins...
 		if len(dbmapping[i].Unit) > 0 {
 			tags["unit"] = dbmapping[i].Unit
 		}
 
-		return deviceID, tags, field, nil
+		found = true
+
+		if !isJson {
+			// if this is not a json struct, there cannot
+			// be more entries, so safe time and return
+			return deviceID, tags, field, nil
+		}
 	}
 
-	return "", nil, nil, nil
+	if found {
+		return deviceID, tags, field, nil
+	} else {
+		return "", nil, nil, nil
+	}
 }
