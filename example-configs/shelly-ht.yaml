@@ -1,0 +1,39 @@
+mqtt:
+  # Required: The MQTT broker to connect to
+  broker: 172.17.0.1
+  # Optinal: Port of the MQTT broker
+  # port: 1883
+  # Optional: Username and Password for authenticating with the MQTT Server
+  #user: <username>
+  #password: <password>
+  # Optional: Used to specify ClientID. The default is <hostname>-<pid>
+  # client_id: somedevice
+  # The Topic path to subscribe to. Be aware that you have to specify the
+  # wildcard.
+  topic_path: shelly-ht/#
+  # Optional: Regular expression to extract the device ID from the topic
+  # path. The default regular expression, assumes that the last "element"
+  # of the topic_path is the device id. The regular expression must contain
+  # a named capture group with the name deviceid. For example the
+  # expression for tasamota based sensors is "tele/(?P<deviceid>.*)/.*".
+  # The default is:
+  # device_id_regex: "(.*/)?(?P<deviceid>.*)"
+  device_id_regex: "shelly-ht/(?P<deviceid>.*?)/.*"
+  # Optional: Expect a single metric to be published as the value on an
+  # mqtt topic. This regex is used to extract the metric name from the
+  # topic. Must contain a named group for `metricname`.
+  metric_per_topic_regex: "shelly-ht/.*/(?P<metricname>.*)"
+  # The MQTT QoS level
+  qos: 0
+influxdb:
+  server: defiant.thkukuk.de
+  database: shellies
+db_mapping:
+  - mqtt_name: temperature:0.tC
+    name: temperature
+    unit: C
+    type: float
+  - mqtt_name: humidity:0.rh
+    name: humidity
+    unit: rh
+    type: float
