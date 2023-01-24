@@ -28,7 +28,7 @@ const (
 	metricPerTopicRegexGroup = "metricname"
 )
 
-type InfluxDBMapping struct {
+type MetricsType struct {
 	MqttName           string                    `yaml:"mqtt_name"`
 	Name               string                    `yaml:"name,omitempty"`
 	Unit               string                    `yaml:"unit,omitempty"`
@@ -63,7 +63,7 @@ func metricPerTopicValue(topic string) string {
         return values[metricPerTopicRegexGroup]
 }
 
-func msg2dbentry(dbmapping []InfluxDBMapping, msg mqtt.Message) (string, map[string]string, map[string]interface{}, error) {
+func msg2dbentry(metrics []MetricsType, msg mqtt.Message) (string, map[string]string, map[string]interface{}, error) {
 	deviceID := deviceIDValue(msg.Topic())
 	if len(deviceID) == 0 {
 		return "", nil, nil, nil // No deviceID, so ignore this message
@@ -85,8 +85,8 @@ func msg2dbentry(dbmapping []InfluxDBMapping, msg mqtt.Message) (string, map[str
 
 	found := false
 
-	for i := range dbmapping {
-		mqttName := dbmapping[i].MqttName
+	for i := range metrics {
+		mqttName := metrics[i].MqttName
 		isJson := false
 
 		if strings.Contains(mqttName, ".") {
@@ -97,8 +97,8 @@ func msg2dbentry(dbmapping []InfluxDBMapping, msg mqtt.Message) (string, map[str
 		if metricName != mqttName {
 			continue
 		}
-		if len(dbmapping[i].Name) == 0 {
-			dbmapping[i].Name = dbmapping[i].MqttName
+		if len(metrics[i].Name) == 0 {
+			metrics[i].Name = metrics[i].MqttName
 		}
 
 		payload := string(msg.Payload())
@@ -106,49 +106,50 @@ func msg2dbentry(dbmapping []InfluxDBMapping, msg mqtt.Message) (string, map[str
 			// gojsonq.Find is of form "a.b.c.d", where "a" is
 			// the mqttName. So remove it, it's not part of the
 			// json struct
-			jsonFind := dbmapping[i].MqttName[(strings.IndexByte(dbmapping[i].MqttName, '.')+1):]
-			logger.Printf("jsonFind: %q - payload: '%s'", jsonFind, payload)
+			jsonFind := metrics[i].MqttName[(strings.IndexByte(metrics[i].MqttName, '.')+1):]
 			entry := gojsonq.New().FromString(payload).Find(jsonFind)
 			if entry == nil {
-				logerr.Printf("WARNING: %q not found in '%s'!", jsonFind, payload)
+				if Verbose {
+					logerr.Printf("WARNING: %q not found in '%s'!", jsonFind, payload)
+				}
 				continue
 			}
 			payload = fmt.Sprintf("%v", entry)
 		}
 
-		if dbmapping[i].StringValueMapping != nil {
-			v := dbmapping[i].StringValueMapping.ErrorValue
-			for k := range dbmapping[i].StringValueMapping.Map {
+		if metrics[i].StringValueMapping != nil {
+			v := metrics[i].StringValueMapping.ErrorValue
+			for k := range metrics[i].StringValueMapping.Map {
 				if payload[:] == k {
-					v = dbmapping[i].StringValueMapping.Map[k]
+					v = metrics[i].StringValueMapping.Map[k]
 				}
 			}
-			field[dbmapping[i].Name] = v
-		} else if dbmapping[i].Type == "float" {
+			field[metrics[i].Name] = v
+		} else if metrics[i].Type == "float" {
 			var f float64
 			if f, err = strconv.ParseFloat(payload[:], 64); err != nil {
 				logerr.Printf("Cannot convert '%s' to float64: %v", payload, err)
 			} else {
-				field[Config.DBMapping[i].Name] = f
+				field[Config.Metrics[i].Name] = f
 			}
-		} else if dbmapping[i].Type == "int" {
+		} else if metrics[i].Type == "int" || metrics[i].Type == "integer" {
 			var f int64
 			if f, err = strconv.ParseInt(payload[:], 10, 0); err != nil {
 				logerr.Printf("Cannot convert '%s' to int64: %v", payload, err)
 			} else {
-				field[dbmapping[i].Name] = f
+				field[metrics[i].Name] = f
 			}
-		} else  if dbmapping[i].Type == "string" {
-			field[dbmapping[i].Name] = payload
+		} else  if metrics[i].Type == "string" {
+			field[metrics[i].Name] = payload
 		}
 
-		for v, k := range dbmapping[i].ConstantTags {
+		for v, k := range metrics[i].ConstantTags {
 			tags[k] = v
 		}
 
 		// XXX json structs and unit -> last one wins...
-		if len(dbmapping[i].Unit) > 0 {
-			tags["unit"] = dbmapping[i].Unit
+		if len(metrics[i].Unit) > 0 {
+			tags["unit"] = metrics[i].Unit
 		}
 
 		found = true

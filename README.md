@@ -2,17 +2,20 @@
 **MQTT Exporter - listens to MQTT topics and forwards them to InfluxDB**
 
 
-This exporter listens to MQTT topics and stores them in an InfluxDB database. It takes the JSON message from the topics and translates this between the MQTT represenation and the format needed for database storage. How this translation is done is specified in the configuration file for mqtt-exporter, as you normally cannot adjust the messages IoT devices send. The IoT devices will push tehri metrics via MQTT to an MQTT Broker and this exporter subscribes to the broker and processes the rrecived messages.
+This exporter listens to MQTT topics and stores them in an InfluxDB database. It takes the JSON message from the topics and translates this between the MQTT represenation and the format needed for database storage. How this translation is done is specified in the configuration file for mqtt-exporter, as you normally cannot adjust the messages IoT devices send. The IoT devices will push their metrics via MQTT to an MQTT Broker and this exporter subscribes to the broker and processes the rrecived messages.
 
 ```plaintext
  IoT Sensors -> publish -> MQTT Broker <- subcribed <- MQTT-Exporter -> stores -> InfluxDB
  ```
 
-I wrote this exporter initial to export the power metering values of my Shelly Plug S devices and make them visible in Grafana.
+I wrote this exporter initial to export the power metering values of my Shelly Plug S and Shelly Plus H&T devices to an InfluxDB and make them visible in Grafana.
 
 ## Assumptions about Messages and Topics
 
-Currently the exporter only supports devices, which publish every metric in an own topic. For Shelly Plug S devices, the MQTT messages would look like:
+MQTT exporter can subscribe to several topics, but there is only one handler for this topics and only one Regex for the device ID and netric name. If separate regex per topic are required, several instances of MQTT broker needs to be run.
+
+It is possible to have devices which publish every metric in an own topic, as JSON struct per topic or a mix of both.
+For Shelly Plug S and Shelly Plus H&T this MQTT messages could look like:
 
 ```plaintext
 shellies/shelly-plug-s1/relay/0/power 20.58
@@ -21,6 +24,7 @@ shellies/shelly-plug-s1/relay/0 on
 shellies/shelly-plug-s1/temperature 22.28
 shellies/shelly-plug-s1/temperature_f 72.10
 shellies/shelly-plug-s1/overtemperature 0
+shelly-ht/shelly-plus-ht-01/events/rpc {"src":"shellyplusht-08b61fce63c4","dst":"shelly-ht/shelly-plus-ht-01/events","method":"NotifyFullStatus","params":{"ts":1674473304.12,"ble":{},"cloud":{"connected":false},"devicepower:0":{"id": 0,"battery":{"V":6.17, "percent":100},"external":{"present":false}},"ht_ui":{},"humidity:0":{"id": 0,"rh":54.3},"mqtt":{"connected":true},"sys":{"mac":"08B61FCE63C4","restart_required":false,"time":null,"unixtime":null,"uptime":1,"ram_size":235504,"ram_free":165340,"fs_size":458752,"fs_free":131072,"cfg_rev":16,"kvs_rev":0,"webhook_rev":0,"available_updates":{},"wakeup_reason":{"boot":"deepsleep_wake","cause":"periodic"},"wakeup_period":7200},"temperature:0":{"id": 0,"tC":19.9, "tF":67.8},"wifi":{"sta_ip":"172.17.0.80","status":"got ip","ssid":"thkukuk","rssi":-70},"ws":{"connected":false}}}
 ```
 
 The device ID, which is used for the `measurement` field when writing the data into the database, is gotten by a regular expression (see `device_id_regex` in the configuration file) from the MQTT topic. This allows an arbitrary place of the device ID in the mqtt topic. For example the tasmota firmware pushes the telemetry data to the topic `tele/<deviceid>/SENSOR`, the Shelly Plug S uses `shellies/<deviceid>/SENSOR` while the Shelly Plus H&T uses `<deviceid>/events/rpc`.
@@ -34,6 +38,7 @@ measurement: shelly-plug-s1, tags: {"unit": "Watt"}, field: {"power": 20.58}
 measurement: shelly-plug-s1, tags: ["unit": "Watt/Minute"}, field: {"energy": 94736}
 measurement: shelly-plug-s1, tags: {"unit": "C"}, field: {"temperature": 22.28}
 measurement: shelly-plug-s1, tags: {}, field: {"switch": 2}
+measurement: shelly-plus-ht-01, tags: {}, field: {"battery_voltage": 100 "humidity": 52.9 "ip_address":XX.XX.XX.XX "temperature":20]
 ```
 
 The measurement is the `device_id_regex` from the MQTT topicy, the field key is the `metricname`.
@@ -102,17 +107,22 @@ Here is my configuration file, which I use for my Shelly Plug S.
 ```yaml
 mqtt:
   # Required: The MQTT broker to connect to
-  broker: 172.17.0.1
+  broker: <mqtt broker IP>
   # Optinal: Port of the MQTT broker
   # port: 1883
   # Optional: Username and Password for authenticating with the MQTT Server
-  user: <username>
-  password: <password>
+  #user: <username>
+  #password: <password>
   # Optional: Used to specify ClientID. The default is <hostname>-<pid>
   # client_id: somedevice
-  # The Topic path to subscribe to. Be aware that you have to specify the
-  # wildcard.
-  topic_path: shellies/#
+  # The Topic paths to subscribe to. Be aware that you have to specify the
+  # wildcard. MQTT Exporter can subscribe to several topics, but all of them
+  # need to match the device_id_regex and metric_per_topic_regex. There are
+  # not different regex per topic. If this is required, an own MQTT Exporter
+  # instance is needed.
+  topic_paths:
+   - shellies/#
+   - shelly-ht/#
   # Optional: Regular expression to extract the device ID from the topic
   # path. The default regular expression, assumes that the last "element"
   # of the topic_path is the device id. The regular expression must contain
@@ -120,26 +130,22 @@ mqtt:
   # expression for tasamota based sensors is "tele/(?P<deviceid>.*)/.*".
   # The default is:
   # device_id_regex: "(.*/)?(?P<deviceid>.*)"
-  device_id_regex: "shellies/(?P<deviceid>.*?)/.*"
+  device_id_regex: ".*?/(?P<deviceid>.*?)/.*"
   # Optional: Expect a single metric to be published as the value on an
   # mqtt topic. This regex is used to extract the metric name from the
   # topic. Must contain a named group for `metricname`.
-  metric_per_topic_regex: "shellies/.*/(?P<metricname>.*)"
+  metric_per_topic_regex: ".*/(?P<metricname>.*)"
   # The MQTT QoS level
   qos: 0
 influxdb:
-  server: defiant.thkukuk.de
+  server: influxdb.example.com
   database: shellies
-db_mapping:
+metrics:
+  # The first metrics are for the Shelly Plug S
   - mqtt_name: temperature
     name: temperature
     unit: C
     type: float
-    # Optional: A map of strings for constant tags. This tags will always
-    # be attached
-    const_tags:
-      reliable: false
-      sensor: shelly-plug-s
   - mqtt_name: power
     name: power
     unit: Watt
@@ -158,7 +164,48 @@ db_mapping:
         low: 1
         on: 2
       error_value: -1
+  - mqtt_name: info.update.has_update
+    name: firmware_update
+    unit: Boolean
+    string_value_mapping:
+      map:
+        true: 1
+        false: 0
+      error_value: -1
+  - mqtt_name: info.update.old_version
+    name: current_firmware_version
+    unit: Version
+    type: string
+  - mqtt_name: info.wifi_sta.ip
+    name: ipaddress
+    type: string
+  # the following metrics are for the Shelly Plus H&T
+  - mqtt_name: rpc.params.temperature:0.tC
+    name: temperature
+    type: float
+  - mqtt_name: rpc.params.humidity:0.rh
+    name: humidity
+    type: float
+  - mqtt_name: rpc.params.devicepower:0.battery.V
+    name: battery_voltage
+    type: float
+  - mqtt_name: rpc.params.devicepower:0.battery.percent
+    name: battery_voltage
+    type: float
+  - mqtt_name: rpc.params.wifi.sta_ip
+    name: ip_address
+    type: string
+
 ```
+
+### Explanation
+
+The metrics section defines, for which MQTT topic the program should look, how to parse the data and how to store it.
+
+* **mqtt_name** is the metricname as defined via the regex. If the topic points to a JSON struct and not a single value, the names added via "dots" are the path inside the JSON struct to the value. So 'rpc.params.temperature:0.tC' means it's the topic which ends on 'rpc'. For more information about this, see the `find` examples of the [gojsonq](https://github.com/thedevsaddam/gojsonq) documentation.
+* **name** is the keyword under which the data is stored in InfluxDB.
+* **type** defines in which format the value stored, valid options are `float`, `int` and `string`. If the values are "on"/"off" or "true"/"false" or something similar, a mapping of the string to an integer (e.g. -1 for "N/A", 0 for "off" and 1 for "on") could be specified with **string_value_mapping**.
+* **unit** will be stored as 'tag' in the database.
 
 ## Environment Variables
 

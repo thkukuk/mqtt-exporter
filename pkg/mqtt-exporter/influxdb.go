@@ -1,8 +1,9 @@
-package influxdb
+package mqttExporter
 
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/influxdata/influxdb-client-go/v2/domain"
@@ -17,7 +18,8 @@ type InfluxDBConfig struct {
 	Server       string `yaml:"server"`
 	Port         string `yaml:"port"`
 	Database     string `yaml:"database"`
-	Organization string `yaml:"organizatin"`
+	Organization string `yaml:"organization"`
+	Token        string `yaml:"token,omitempty"`
 }
 
 func WriteEntry(client influxdb2.Client, config InfluxDBConfig, measurement string, tag map[string]string, field map[string]interface{}) error {
@@ -27,8 +29,7 @@ func WriteEntry(client influxdb2.Client, config InfluxDBConfig, measurement stri
 	// Create go proc for reading and logging errors
 	go func() {
 		for err := range errorsCh {
-			// XXX better way of error reporting
-			fmt.Printf("Write error: %s\n", err.Error())
+			logerr.Printf("Write error: %s\n", err.Error())
 		}
 	}()
 
@@ -44,6 +45,14 @@ func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
 	ctx := context.Background()
 	// Get Buckets API client
 	bucketsAPI := client.BucketsAPI()
+
+	bucket, err := bucketsAPI.FindBucketByName(ctx, config.Database)
+
+	// so we found the database
+	if bucket != nil {
+		return nil
+	}
+
 	// Get organization that will own new bucket
 	org, err := client.OrganizationsAPI().FindOrganizationByName(ctx, config.Organization)
 	if err != nil {
@@ -54,10 +63,18 @@ func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
 	if err != nil {
 		return err
 	}
+
+	logger.Printf("Created database %q in organization %q\n", config.Database, config.Organization)
 	return nil
 }
 
-func ConnectInfluxDB(config *InfluxDBConfig) influxdb2.Client {
+func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
+
+	token := os.Getenv("INFLUXDB_TOKEN")
+        if token != "" {
+                config.Token = token
+        }
+
 	// Create a new client using an InfluxDB server base URL and an
 	// authentication token
 	if len(config.Port) == 0 {
@@ -65,10 +82,13 @@ func ConnectInfluxDB(config *InfluxDBConfig) influxdb2.Client {
 	}
 	serverUrl := fmt.Sprintf("http://%s:%s",
 		config.Server, config.Port)
-	client := influxdb2.NewClient(serverUrl, "") // XXX token
+	client := influxdb2.NewClient(serverUrl, config.Token)
 	defer client.Close()
 
-	// XXX Verify database exists, if not create it
+	err := createDatabase(client, config)
+	if err != nil {
+		logger.Printf("Cannot verify database, maybe InfluxDB v1 is used? Please make sure it exists.")
+	}
 
-	return client
+	return client, nil
 }

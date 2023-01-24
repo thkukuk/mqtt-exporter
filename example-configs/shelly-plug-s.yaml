@@ -1,6 +1,6 @@
 mqtt:
   # Required: The MQTT broker to connect to
-  broker: 172.17.0.1
+  broker: mqtt.example.com
   # Optinal: Port of the MQTT broker
   # port: 1883
   # Optional: Username and Password for authenticating with the MQTT Server
@@ -15,7 +15,6 @@ mqtt:
   # instance is needed.
   topic_paths:
    - shellies/#
-   - shelly-ht/#
   # Optional: Regular expression to extract the device ID from the topic
   # path. The default regular expression, assumes that the last "element"
   # of the topic_path is the device id. The regular expression must contain
@@ -23,24 +22,24 @@ mqtt:
   # expression for tasamota based sensors is "tele/(?P<deviceid>.*)/.*".
   # The default is:
   # device_id_regex: "(.*/)?(?P<deviceid>.*)"
-  device_id_regex: ".*?/(?P<deviceid>.*?)/.*"
+  device_id_regex: "shellies/(?P<deviceid>.*?)/.*"
   # Optional: Expect a single metric to be published as the value on an
   # mqtt topic. This regex is used to extract the metric name from the
   # topic. Must contain a named group for `metricname`.
-  metric_per_topic_regex: ".*/(?P<metricname>.*)"
+  metric_per_topic_regex: "shellies/.*/(?P<metricname>.*)"
   # The MQTT QoS level
   qos: 0
 influxdb:
   # machine on which influxdb runs on port 8086:
-  server: 172.17.0.1
+  server: influxdb.example.com
   # Database or bucket or however it will be called in influxdb3...
   database: shellies
   # Optional, only used if a new database/bucket needs to be created
-  # organization: <my-org>
+  organizatin: demo-org
   # If a token is required, you can specify it here (but be careful that you
   # don't commit it a public git repo or something similar! Or you can use
   # an environment variable 'INFLUXDB_TOKEN'
-  # token: <token>
+  #token: <token>
 metrics:
   # The first metrics are for the Shelly Plug S
   - mqtt_name: temperature
@@ -80,31 +79,3 @@ metrics:
   - mqtt_name: info.wifi_sta.ip
     name: ipaddress
     type: string
-  # the following metrics are for the Shelly Plus H&T
-  - mqtt_name: rpc.params.temperature:0.tC
-    name: temperature
-    unit: C
-    type: float
-  - mqtt_name: rpc.params.humidity:0.rh
-    name: humidity
-    unit: rh
-    type: float
-  - mqtt_name: rpc.params.devicepower:0.battery.V
-    name: battery_voltage
-    unit: Volt
-    type: float
-  - mqtt_name: rpc.params.devicepower:0.battery.percent
-    name: battery_voltage
-    unit: "%"
-    type: float
-  - mqtt_name: rpc.params.wifi.sta_ip
-    name: ip_address
-    type: string
-  - mqtt_name: humidity
-    name: humidity
-    unit: rh
-    type: float
-  - mqtt_name: battery
-    name: battery_voltage
-    unit: "%"
-    type: int

@@ -25,8 +25,6 @@ import (
 
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/influxdb-client-go/v2"
-
-	"github.com/thkukuk/mqtt-exporter/pkg/influxdb"
 )
 
 const (
@@ -36,15 +34,15 @@ const (
 )
 
 type ConfigType struct {
-        MQTT            *MQTTConfig              `yaml:"mqtt,omitempty"`
-	InfluxDB        *influxdb.InfluxDBConfig `yaml:"influxdb,omitempty"`
-	DBMapping       []InfluxDBMapping        `yaml:"db_mapping"`
+        MQTT            *MQTTConfig     `yaml:"mqtt"`
+	InfluxDB        *InfluxDBConfig `yaml:"influxdb,omitempty"`
+	Metrics         []MetricsType   `yaml:"metrics"`
 }
 
 type MQTTConfig struct {
         Broker                 string `yaml:"broker"`
 	Port                   string `yaml:"port"`
-        TopicPath              string `yaml:"topic_path"`
+        TopicPaths             []string `yaml:"topic_paths"`
         DeviceIDPattern        string `yaml:"device_id_regex"`
         User                   string `yaml:"user"`
         Password               string `yaml:"password"`
@@ -92,13 +90,13 @@ func msgHandler(client mqtt.Client, msg mqtt.Message) {
 	}
 
 	// XXX error handling
-	id, unit, field, _ := msg2dbentry(Config.DBMapping, msg)
+	id, unit, field, _ := msg2dbentry(Config.Metrics, msg)
 
 	if len(id) > 0 {
 		if Verbose {
 			logger.Printf("- WriteEntry(%s, %v, %v)", id, unit, field)
 		}
-		_ = influxdb.WriteEntry(db, *Config.InfluxDB, id, unit, field)
+		_ = WriteEntry(db, *Config.InfluxDB, id, unit, field)
 	}
 }
 
@@ -107,28 +105,28 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 
 	// Establish the subscription - doing this here means that it
 	// will happen every time a connection is established
-	// (useful if opts.CleanSession is TRUE or the broker does not
-	// reliably store session data)
-	token := client.Subscribe(Config.MQTT.TopicPath,
-		Config.MQTT.QoS, msgHandler)
 
 	// the connection handler is called in a goroutine so blocking
 	// here would hot cause an issue. However as blocking in other
 	// handlers does cause problems its best to just assume we should
 	// not block
-	go func() {
-		//_ = token.Wait()
-		<-token.Done()
+	for i := range Config.MQTT.TopicPaths {
+		topic := Config.MQTT.TopicPaths[i]
+		token := client.Subscribe(topic, Config.MQTT.QoS, msgHandler)
 
-		if token.Error() != nil {
-			logerr.Printf("ERROR subscribing: %s", token.Error())
-		} else {
-			if !Quiet {
-				logger.Printf("Subscribed to topic: %s",
-					Config.MQTT.TopicPath)
+		go func() {
+			//_ = token.Wait()
+			<-token.Done()
+
+			if token.Error() != nil {
+				logerr.Printf("ERROR subscribing: %s", token.Error())
+			} else {
+				if !Quiet {
+					logger.Printf("Subscribed to topic: %s", topic)
+				}
 			}
-		}
-	}()
+		}()
+	}
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
@@ -191,7 +189,10 @@ func RunServer() {
 		if len(Config.InfluxDB.Database) == 0 {
 			Config.InfluxDB.Database = defInfluxDBdatabase
 		}
-		db = influxdb.ConnectInfluxDB(Config.InfluxDB)
+		db, err = ConnectInfluxDB(Config.InfluxDB)
+		if err != nil {
+			logerr.Fatalf("Cannot connect to InfluxDB: %v", err)
+		}
 	} else {
 		logger.Fatal("No InfluxDB server specified!")
 	}

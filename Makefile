@@ -1,4 +1,4 @@
-MWS_BIN := bin/mqtt-exporter
+MQTT_EXPORTER_BIN := bin/mqtt-exporter
 
 GO ?= go
 GO_MD2MAN ?= go-md2man
@@ -23,10 +23,10 @@ vendor: dep ## Create vendor directory
 	@$(GO) mod vendor
 
 build: ## Build the binary files
-	$(GO) build -v -o $(MWS_BIN) $(USE_VENDOR) $(LOCAL_LDFLAGS) ./cmd/mqtt-exporter
+	$(GO) build -v -o $(MQTT_EXPORTER_BIN) $(USE_VENDOR) $(LOCAL_LDFLAGS) ./cmd/mqtt-exporter
 
 clean: ## Remove previous builds
-	@rm -f $(MWS_BIN)
+	@rm -f $(MQTT_EXPORTER_BIN)
 
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
