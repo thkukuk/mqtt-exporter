@@ -101,7 +101,7 @@ func msgHandler(client mqtt.Client, msg mqtt.Message) {
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	logger.Println("Connection established")
+	logger.Println("Connection to MQTT Broker established")
 
 	// Establish the subscription - doing this here means that it
 	// will happen every time a connection is established
@@ -130,7 +130,7 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	logerr.Printf("Connection lost: %v", err)
+	logerr.Printf("Connection to MQTT Broker lost: %v", err)
 }
 
 func RunServer() {
