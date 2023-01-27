@@ -1,8 +1,8 @@
 mqtt:
   # Required: The MQTT broker to connect to
-  broker: 172.17.0.1
+  broker: defiant.thkukuk.de
   # Optinal: Port of the MQTT broker
-  # port: 1883
+  port: 8883
   # Optional: Username and Password for authenticating with the MQTT Server
   #user: <username>
   #password: <password>

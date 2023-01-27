@@ -108,8 +108,12 @@ Here is my configuration file, which I use for my Shelly Plug S.
 mqtt:
   # Required: The MQTT broker to connect to
   broker: <mqtt broker IP>
-  # Optinal: Port of the MQTT broker
+  # Optional: Port of the MQTT broker
+  # 8883 is the default MQTT port using TLS, 1883 will not use TLS
   # port: 1883
+  # Optional: Protocol to use
+  # 'mqtts' is using TLS, 'mqtt' will not
+  # protocol: mqtt
   # Optional: Username and Password for authenticating with the MQTT Server
   #user: <username>
   #password: <password>

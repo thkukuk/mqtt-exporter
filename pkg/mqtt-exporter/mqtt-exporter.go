@@ -30,6 +30,9 @@ import (
 const (
 	deviceIDRegexGroup = "deviceid"
 	defMQTTPort = "1883"
+	defMQTTSPort = "8883"
+	defMQTTProtocol = "mqtt"
+	defMQTTSProtocol = "mqtts"
 	defInfluxDBdatabase = "my-bucket"
 )
 
@@ -42,6 +45,7 @@ type ConfigType struct {
 type MQTTConfig struct {
         Broker                 string `yaml:"broker"`
 	Port                   string `yaml:"port"`
+	Protocol               string `yaml:"protocol"`
         TopicPaths             []string `yaml:"topic_paths"`
         DeviceIDPattern        string `yaml:"device_id_regex"`
         User                   string `yaml:"user"`
@@ -199,12 +203,25 @@ func RunServer() {
 
 	opts := mqtt.NewClientOptions()
 
-	if len(Config.MQTT.Port) == 0 {
-		Config.MQTT.Port = defMQTTPort
+	if len(Config.MQTT.Protocol) == 0 {
+		if Config.MQTT.Port == defMQTTSPort {
+			Config.MQTT.Protocol = defMQTTSProtocol
+		} else {
+			Config.MQTT.Protocol = defMQTTProtocol
+		}
 	}
 
-	brokerUrl := fmt.Sprintf("tcp://%s:%s",
-		Config.MQTT.Broker, Config.MQTT.Port)
+	if len(Config.MQTT.Port) == 0 {
+		if Config.MQTT.Protocol == defMQTTSProtocol {
+			Config.MQTT.Port = defMQTTSPort
+		} else {
+			Config.MQTT.Port = defMQTTPort
+		}
+	}
+
+	brokerUrl := fmt.Sprintf("%s://%s:%s",
+		Config.MQTT.Protocol, Config.MQTT.Broker,
+		Config.MQTT.Port)
 	if !Quiet {
 		logger.Printf("Broker: %s", brokerUrl)
 	}
