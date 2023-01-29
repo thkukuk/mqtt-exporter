@@ -1,0 +1,50 @@
+# This config is for SONOFF SNZB-02 devices, connected via zigbee bridge
+# and zigbee2mqtt. The devices where renamed to SONOFF-SNZB-02-X, where
+# -X is a consecutive number.
+mqtt:
+  # Required: The MQTT broker to connect to
+  broker: broker.example.com
+  # Optinal: Port of the MQTT broker
+  # port: 1883
+  # Optional: Username and Password for authenticating with the MQTT Server
+  #user: <username>
+  #password: <password>
+  # Optional: Used to specify ClientID. The default is <hostname>-<pid>
+  # client_id: somedevice
+  # The Topic path to subscribe to. Be aware that you have to specify the
+  # wildcard.
+  topic_paths:
+    - zigbee2mqtt/#
+  # Optional: Regular expression to extract the device ID from the topic
+  # path. The default regular expression, assumes that the last "element"
+  # of the topic_path is the device id. The regular expression must contain
+  # a named capture group with the name deviceid. For example the
+  # expression for tasamota based sensors is "tele/(?P<deviceid>.*)/.*".
+  # The default is:
+  # device_id_regex: "(.*/)?(?P<deviceid>.*)"
+  device_id_regex: "zigbee2mqtt/(?P<deviceid>.*)"
+  # Optional: Expect a single metric to be published as the value on an
+  # mqtt topic. This regex is used to extract the metric name from the
+  # topic. Must contain a named group for `metricname`.
+  metric_per_topic_regex: ".*/(?P<metricname>.*)-[0-9]"
+  # The MQTT QoS level
+  qos: 0
+influxdb:
+  server: influxdb.example.com
+  database: zigbee
+metrics:
+  - mqtt_name: SONOFF-SNZB-02.temperature
+    name: temperature
+    type: float
+  - mqtt_name: SONOFF-SNZB-02.humidity
+    name: humidity
+    type: float
+  - mqtt_name: SONOFF-SNZB-02.battery
+    name: battery
+    type: float
+  - mqtt_name: SONOFF-SNZB-02.linkquality
+    name: linkquality
+    type: int
+  - mqtt_name: SONOFF-SNZB-02.voltage
+    name: voltage
+    type: int
