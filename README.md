@@ -194,7 +194,7 @@ metrics:
     name: battery_voltage
     type: float
   - mqtt_name: rpc.params.devicepower:0.battery.percent
-    name: battery_voltage
+    name: battery
     type: float
   - mqtt_name: rpc.params.wifi.sta_ip
     name: ip_address
