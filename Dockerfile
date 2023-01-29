@@ -10,7 +10,7 @@ LABEL maintainer="Thorsten Kukuk <kukuk@thkukuk.de>"
 ARG BUILDTIME=
 ARG VERSION=unreleased
 LABEL org.opencontainers.image.title="MQTT-Exporter"
-LABEL org.opencontainers.image.description="Exports MQTT messages to InfluxDB or Prometheus"
+LABEL org.opencontainers.image.description="Exports MQTT messages to InfluxDB"
 LABEL org.opencontainers.image.created=$BUILDTIME
 LABEL org.opencontainers.image.version=$VERSION
 

@@ -53,7 +53,7 @@ func main() {
 		Use:   "mqtt-exporter",
 		Short: "Starts a MQTT Exporter",
 		Long: `Starts a MQTT Exporter.
-This daemon listens to MQTT topics and forwards them to InfluxDB or Prometheus.
+This daemon listens to MQTT topics and forwards them to InfluxDB.
 `,
 		Run: runMqttExporterCmd,
 		Args:  cobra.ExactArgs(0),
