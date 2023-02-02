@@ -19,7 +19,7 @@ import (
         "io/ioutil"
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/thkukuk/mqtt-exporter/pkg/logger"
 	"gopkg.in/yaml.v3"
 	"github.com/spf13/cobra"
 	"github.com/thkukuk/mqtt-exporter/pkg/mqtt-exporter"

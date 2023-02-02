@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.2
-	github.com/influxdata/influxdb-client-go/v2 v2.12.1
+	github.com/influxdata/influxdb-client-go/v2 v2.12.2
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/thedevsaddam/gojsonq/v2 v2.5.2

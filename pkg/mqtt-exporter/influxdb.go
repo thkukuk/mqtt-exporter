@@ -42,7 +42,9 @@ func WriteEntry(client influxdb2.Client, config InfluxDBConfig, measurement stri
 }
 
 func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
-
+	if Verbose {
+		log.Debug("Check if the database needs to be created...")
+	}
 	ctx := context.Background()
 	// Get Buckets API client
 	bucketsAPI := client.BucketsAPI()
@@ -60,9 +62,11 @@ func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
 		return err
 	}
 	// Create  a bucket with 1 day retention policy
-	_, err = bucketsAPI.CreateBucketWithName(ctx, org, config.Database, domain.RetentionRule{EverySeconds: 0})
+	_, err = bucketsAPI.CreateBucketWithName(ctx, org,
+		config.Database, domain.RetentionRule{EverySeconds: 0})
 	if err != nil {
-		return err
+		return fmt.Errorf("Error crating bucket %q: %v",
+			config.Database, err)
 	}
 
 	log.Infof("Created database %q in organization %q\n", config.Database, config.Organization)
@@ -83,12 +87,16 @@ func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
 	}
 	serverUrl := fmt.Sprintf("http://%s:%s",
 		config.Server, config.Port)
+	log.Debugf("influxdb2.NewClient(%s)", serverUrl)
 	client := influxdb2.NewClient(serverUrl, config.Token)
 	defer client.Close()
 
 	err := createDatabase(client, config)
 	if err != nil {
 		log.Warnf("Cannot verify database, maybe InfluxDB v1 is used? Please make sure it exists.")
+		if Verbose {
+			log.Debug(err)
+		}
 	}
 
 	return client, nil

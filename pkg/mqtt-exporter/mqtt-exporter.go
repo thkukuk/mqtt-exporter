@@ -191,6 +191,9 @@ func RunServer() {
 		if len(Config.InfluxDB.Database) == 0 {
 			Config.InfluxDB.Database = defInfluxDBdatabase
 		}
+		if Verbose {
+			log.Debug("Try to connect to InfluxDB...")
+		}
 		db, err = ConnectInfluxDB(Config.InfluxDB)
 		if err != nil {
 			log.Fatalf("Cannot connect to InfluxDB: %v", err)
