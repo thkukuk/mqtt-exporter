@@ -30,8 +30,17 @@ mqtt:
   # The MQTT QoS level
   qos: 0
 influxdb:
+  # machine on which influxdb runs on port 8086:
   server: influxdb.example.com
+  # Database or bucket or however it will be called in InfluxDB v3...
   database: zigbee
+  # Optional for InfluxDB v1.x, required for InfluxDB v2.x.
+  organization: my-org
+  # If a token is required, you can specify it here (but be careful that you
+  # don't commit it a public git repo or something similar! Or you can use
+  # an environment variable 'INFLUXDB_TOKEN'
+  # For InfluxDB v1 this is 'username:password', for InfluxDB v2 the token
+  # token: <token>
 metrics:
   - mqtt_name: SONOFF-SNZB-02.temperature
     name: temperature

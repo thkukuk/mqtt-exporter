@@ -1,6 +1,6 @@
 mqtt:
   # Required: The MQTT broker to connect to
-  broker: defiant.thkukuk.de
+  broker: mqtt.example.com
   # Optinal: Port of the MQTT broker
   port: 8883
   # Optional: Username and Password for authenticating with the MQTT Server
@@ -32,14 +32,15 @@ mqtt:
   qos: 0
 influxdb:
   # machine on which influxdb runs on port 8086:
-  server: 172.17.0.1
-  # Database or bucket or however it will be called in influxdb3...
+  server: influxdb.example.com
+  # Database or bucket or however it will be called in InfluxDB v3...
   database: shellies
-  # Optional, only used if a new database/bucket needs to be created
-  # organization: <my-org>
+  # Optional for InfluxDB v1.x, required for InfluxDB v2.x.
+  organization: my-org
   # If a token is required, you can specify it here (but be careful that you
   # don't commit it a public git repo or something similar! Or you can use
   # an environment variable 'INFLUXDB_TOKEN'
+  # For InfluxDB v1 this is 'username:password', for InfluxDB v2 the token
   # token: <token>
 metrics:
   # The first metrics are for the Shelly Plug S

@@ -32,14 +32,15 @@ mqtt:
 influxdb:
   # machine on which influxdb runs on port 8086:
   server: influxdb.example.com
-  # Database or bucket or however it will be called in influxdb3...
+  # Database or bucket or however it will be called in InfluxDB v3...
   database: shellies
-  # Optional, only used if a new database/bucket needs to be created
-  organizatin: demo-org
+  # Optional for InfluxDB v1.x, required for InfluxDB v2.x.
+  organization: my-org
   # If a token is required, you can specify it here (but be careful that you
   # don't commit it a public git repo or something similar! Or you can use
   # an environment variable 'INFLUXDB_TOKEN'
-  #token: <token>
+  # For InfluxDB v1 this is 'username:password', for InfluxDB v2 the token
+  # token: <token>
 metrics:
   # The first metrics are for the Shelly Plug S
   - mqtt_name: temperature
