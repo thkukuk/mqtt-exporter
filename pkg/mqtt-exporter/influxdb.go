@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/influxdata/influxdb-client-go/v2/domain"
 	"github.com/influxdata/influxdb-client-go/v2"
 )
@@ -29,7 +30,7 @@ func WriteEntry(client influxdb2.Client, config InfluxDBConfig, measurement stri
 	// Create go proc for reading and logging errors
 	go func() {
 		for err := range errorsCh {
-			logerr.Printf("Write error: %s\n", err.Error())
+			log.Errorf("Write error: %s\n", err.Error())
 		}
 	}()
 
@@ -64,7 +65,7 @@ func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
 		return err
 	}
 
-	logger.Printf("Created database %q in organization %q\n", config.Database, config.Organization)
+	log.Infof("Created database %q in organization %q\n", config.Database, config.Organization)
 	return nil
 }
 
@@ -87,7 +88,7 @@ func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
 
 	err := createDatabase(client, config)
 	if err != nil {
-		logger.Printf("Cannot verify database, maybe InfluxDB v1 is used? Please make sure it exists.")
+		log.Warnf("Cannot verify database, maybe InfluxDB v1 is used? Please make sure it exists.")
 	}
 
 	return client, nil

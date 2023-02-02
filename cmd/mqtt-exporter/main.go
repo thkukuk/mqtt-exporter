@@ -17,11 +17,10 @@ package main
 import (
 	"fmt"
         "io/ioutil"
-        "log"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-
 	"github.com/spf13/cobra"
 	"github.com/thkukuk/mqtt-exporter/pkg/mqtt-exporter"
 )
@@ -75,7 +74,7 @@ func runMqttExporterCmd(cmd *cobra.Command, args []string) {
 	var err error
 
 	if !mqttExporter.Quiet {
-		log.Printf("Read yaml config %q\n", configFile)
+		log.Infof("Read yaml config %q\n", configFile)
 	}
 	mqttExporter.Config, err = read_yaml_config(configFile)
 	if err != nil {

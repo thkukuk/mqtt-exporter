@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/thedevsaddam/gojsonq/v2"
 )
@@ -75,7 +76,7 @@ func msg2dbentry(metrics []MetricsType, msg mqtt.Message) (string, map[string]st
 	}
 
 	if Verbose {
-		logger.Printf("- Device ID: %q, Metric name: %q",
+		log.Debugf("- Device ID: %q, Metric name: %q",
 			deviceID, metricName)
 	}
 
@@ -110,7 +111,7 @@ func msg2dbentry(metrics []MetricsType, msg mqtt.Message) (string, map[string]st
 			entry := gojsonq.New().FromString(payload).Find(jsonFind)
 			if entry == nil {
 				if Verbose {
-					logerr.Printf("WARNING: %q not found in '%s'!", jsonFind, payload)
+					log.Warnf("WARNING: %q not found in '%s'!", jsonFind, payload)
 				}
 				continue
 			}
@@ -128,14 +129,14 @@ func msg2dbentry(metrics []MetricsType, msg mqtt.Message) (string, map[string]st
 		} else if metrics[i].Type == "float" {
 			var f float64
 			if f, err = strconv.ParseFloat(payload[:], 64); err != nil {
-				logerr.Printf("Cannot convert '%s' to float64: %v", payload, err)
+				log.Errorf("Cannot convert '%s' to float64: %v", payload, err)
 			} else {
 				field[Config.Metrics[i].Name] = f
 			}
 		} else if metrics[i].Type == "int" || metrics[i].Type == "integer" {
 			var f int64
 			if f, err = strconv.ParseInt(payload[:], 10, 0); err != nil {
-				logerr.Printf("Cannot convert '%s' to int64: %v", payload, err)
+				log.Errorf("Cannot convert '%s' to int64: %v", payload, err)
 			} else {
 				field[metrics[i].Name] = f
 			}

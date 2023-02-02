@@ -16,13 +16,13 @@ package mqttExporter
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"regexp"
 	"syscall"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/influxdb-client-go/v2"
 )
@@ -59,8 +59,6 @@ var (
 	Version = "unreleased"
 	Quiet   = false
 	Verbose = false
-	logger  = log.New(os.Stdout, "", log.LstdFlags)
-	logerr  = log.New(os.Stderr, "", log.LstdFlags)
 	Config ConfigType
 	db influxdb2.Client
 	deviceIDRegex *regexp.Regexp
@@ -90,7 +88,7 @@ func deviceIDValue(topic string) string {
 
 func msgHandler(client mqtt.Client, msg mqtt.Message) {
 	if Verbose {
-		logger.Printf("Received message: topic: %s - %s\n", msg.Topic(), msg.Payload())
+		log.Debugf("Received message: topic: %s - %s\n", msg.Topic(), msg.Payload())
 	}
 
 	// XXX error handling
@@ -98,14 +96,14 @@ func msgHandler(client mqtt.Client, msg mqtt.Message) {
 
 	if len(id) > 0 {
 		if Verbose {
-			logger.Printf("- WriteEntry(%s, %v, %v)", id, unit, field)
+			log.Debugf("- WriteEntry(%s, %v, %v)", id, unit, field)
 		}
 		_ = WriteEntry(db, *Config.InfluxDB, id, unit, field)
 	}
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	logger.Println("Connection to MQTT Broker established")
+	log.Info("Connection to MQTT Broker established")
 
 	// Establish the subscription - doing this here means that it
 	// will happen every time a connection is established
@@ -123,10 +121,10 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 			<-token.Done()
 
 			if token.Error() != nil {
-				logerr.Printf("ERROR subscribing: %s", token.Error())
+				log.Errorf("Error subscribing: %s", token.Error())
 			} else {
 				if !Quiet {
-					logger.Printf("Subscribed to topic: %s", topic)
+					log.Infof("Subscribed to topic: %s", topic)
 				}
 			}
 		}()
@@ -134,12 +132,12 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	logerr.Printf("Connection to MQTT Broker lost: %v", err)
+	log.Errorf("Connection to MQTT Broker lost: %v", err)
 }
 
 func RunServer() {
 	if !Quiet {
-		logger.Printf("MQTT Exporter (mqtt-exporter) %s is starting...\n", Version)
+		log.Infof("MQTT Exporter (mqtt-exporter) %s is starting...\n", Version)
 	}
 
 	var mqtt_client mqtt.Client
@@ -150,8 +148,8 @@ func RunServer() {
 
 	go func() {
 		<-quit
-		logger.Print("Terminated via Signal. Shutting down...")
-		if mqtt_client.IsConnectionOpen() {
+		log.Info("Terminated via Signal. Shutting down...")
+		if mqtt_client != nil && mqtt_client.IsConnectionOpen() {
 			mqtt_client.Disconnect(250)
 		}
 		os.Exit(0)
@@ -160,7 +158,7 @@ func RunServer() {
 	var err error
 	deviceIDRegex, err = regexp.Compile(Config.MQTT.DeviceIDPattern)
 	if err != nil {
-		logerr.Fatal(err)
+		log.Fatal(err)
 	}
 	var validRegex bool
         for _, name := range deviceIDRegex.SubexpNames() {
@@ -169,14 +167,14 @@ func RunServer() {
                 }
         }
         if !validRegex {
-		logerr.Fatalf("device id regex %q does not contain required regex group %q",
+		log.Fatalf("device id regex %q does not contain required regex group %q",
 			Config.MQTT.DeviceIDPattern, deviceIDRegexGroup)
         }
 
 	if len(Config.MQTT.MetricPerTopicPattern) > 0 {
 		metricPerTopicRegex, err = regexp.Compile(Config.MQTT.MetricPerTopicPattern)
 		if err != nil {
-			logerr.Fatalf("Error compiling metric_per_topic_regex: %v", err)
+			log.Fatalf("Error compiling metric_per_topic_regex: %v", err)
 		}
 		for _, name := range metricPerTopicRegex.SubexpNames() {
 			if name == metricPerTopicRegexGroup {
@@ -184,7 +182,7 @@ func RunServer() {
 			}
 		}
 		if !validRegex {
-			logerr.Fatalf("metric_per_topic_regex %q does not contain required regex group %q",
+			log.Fatalf("metric_per_topic_regex %q does not contain required regex group %q",
 				Config.MQTT.MetricPerTopicPattern, metricPerTopicRegexGroup)
 		}
 	}
@@ -195,10 +193,10 @@ func RunServer() {
 		}
 		db, err = ConnectInfluxDB(Config.InfluxDB)
 		if err != nil {
-			logerr.Fatalf("Cannot connect to InfluxDB: %v", err)
+			log.Fatalf("Cannot connect to InfluxDB: %v", err)
 		}
 	} else {
-		logger.Fatal("No InfluxDB server specified!")
+		log.Fatal("No InfluxDB server specified!")
 	}
 
 	opts := mqtt.NewClientOptions()
@@ -223,7 +221,7 @@ func RunServer() {
 		Config.MQTT.Protocol, Config.MQTT.Broker,
 		Config.MQTT.Port)
 	if !Quiet {
-		logger.Printf("Broker: %s", brokerUrl)
+		log.Printf("Broker: %s", brokerUrl)
 	}
 
 	opts.AddBroker(brokerUrl)
@@ -247,7 +245,7 @@ func RunServer() {
         for {
 		mqtt_client = mqtt.NewClient(opts)
 		if token := mqtt_client.Connect(); token.Wait() && token.Error() != nil {
-			logger.Printf("Could not connect to mqtt broker, sleep 10 second: %v", token.Error())
+			log.Warnf("Could not connect to mqtt broker, sleep 10 second: %v", token.Error())
 			time.Sleep(10 * time.Second)
 		} else {
                         break
@@ -259,7 +257,7 @@ func RunServer() {
 	for {
                 select {
                 case err := <-errorChan:
-                        logerr.Printf("Error while processing message: %v", err)
+                        log.Errorf("Error while processing message: %v", err)
                 }
         }
 }
