@@ -199,6 +199,7 @@ func init() {
     formatter.TimestampFormat = "02-01-2006 15:04:05"
     formatter.FullTimestamp = true
     formatter.DisableTimestamp = true
+    formatter.ForceColors = true
     logrus.SetFormatter(formatter)
     logrus.SetOutput(os.Stdout) // Set output to stdout; set to stderr by default
     logrus.SetLevel(logrus.DebugLevel)
