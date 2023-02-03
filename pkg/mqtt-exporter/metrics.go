@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/thkukuk/mqtt-exporter/pkg/logger"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/thedevsaddam/gojsonq/v2"
 )

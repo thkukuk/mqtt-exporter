@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/thkukuk/mqtt-exporter/pkg/logger"
 	"github.com/influxdata/influxdb-client-go/v2/domain"
 	"github.com/influxdata/influxdb-client-go/v2"
 )
@@ -46,11 +46,11 @@ func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
 		log.Debug("Check if the database needs to be created...")
 	}
 	ctx := context.Background()
-	// Get Buckets API client
-	bucketsAPI := client.BucketsAPI()
 
-	bucket, err := bucketsAPI.FindBucketByName(ctx, config.Database)
-
+	bucket, err := client.BucketsAPI().FindBucketByName(ctx, config.Database)
+	if Verbose && err != nil {
+		log.Debugf("Error finding bucket %q: %v", config.Database, err)
+	}
 	// so we found the database
 	if bucket != nil {
 		return nil
@@ -59,17 +59,20 @@ func createDatabase(client influxdb2.Client, config *InfluxDBConfig) error {
 	// Get organization that will own new bucket
 	org, err := client.OrganizationsAPI().FindOrganizationByName(ctx, config.Organization)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error finding organization %q: %v",
+			config.Organization, err)
 	}
 	// Create  a bucket with 1 day retention policy
-	_, err = bucketsAPI.CreateBucketWithName(ctx, org,
+	_, err = client.BucketsAPI().CreateBucketWithName(ctx, org,
 		config.Database, domain.RetentionRule{EverySeconds: 0})
 	if err != nil {
 		return fmt.Errorf("Error crating bucket %q: %v",
 			config.Database, err)
 	}
 
-	log.Infof("Created database %q in organization %q\n", config.Database, config.Organization)
+	if !Quiet {
+		log.Infof("Created database %q in organization %q\n", config.Database, config.Organization)
+	}
 	return nil
 }
 
@@ -87,7 +90,6 @@ func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
 	}
 	serverUrl := fmt.Sprintf("http://%s:%s",
 		config.Server, config.Port)
-	log.Debugf("influxdb2.NewClient(%s)", serverUrl)
 	client := influxdb2.NewClient(serverUrl, config.Token)
 	defer client.Close()
 
@@ -95,7 +97,7 @@ func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get health status: %v", err)
 	} else if health.Status == domain.HealthCheckStatusFail {
-                return nil, fmt.Errorf("Database not healthy: %v", health)
+		return nil, fmt.Errorf("Database not healthy: %v", health)
 	}
 
 	err = createDatabase(client, config)

@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/thkukuk/mqtt-exporter/pkg/logger"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/influxdb-client-go/v2"
 )
@@ -224,7 +224,7 @@ func RunServer() {
 		Config.MQTT.Protocol, Config.MQTT.Broker,
 		Config.MQTT.Port)
 	if !Quiet {
-		log.Printf("Broker: %s", brokerUrl)
+		log.Infof("Broker: %s", brokerUrl)
 	}
 
 	opts.AddBroker(brokerUrl)
