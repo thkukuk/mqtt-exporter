@@ -91,7 +91,14 @@ func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
 	client := influxdb2.NewClient(serverUrl, config.Token)
 	defer client.Close()
 
-	err := createDatabase(client, config)
+	health, err := client.Health(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get health status: %v", err)
+	} else if health.Status == domain.HealthCheckStatusFail {
+                return nil, fmt.Errorf("Database not healthy: %v", health)
+	}
+
+	err = createDatabase(client, config)
 	if err != nil {
 		log.Warnf("Cannot verify database, maybe InfluxDB v1 is used? Please make sure it exists.")
 		if Verbose {
