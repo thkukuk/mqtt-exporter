@@ -138,8 +138,7 @@ mqtt:
   # The default is:
   # device_id_regex: "(.*/)?(?P<deviceid>.*)"
   device_id_regex: ".*?/(?P<deviceid>.*?)/.*"
-  # Optional: Expect a single metric to be published as the value on an
-  # mqtt topic. This regex is used to extract the metric name from the
+  # Optional: This regex is used to extract the metric name from the
   # topic. Must contain a named group for `metricname`.
   metric_per_topic_regex: ".*/(?P<metricname>.*)"
   # The MQTT QoS level
