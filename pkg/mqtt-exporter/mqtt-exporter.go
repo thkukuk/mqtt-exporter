@@ -21,8 +21,10 @@ import (
 	"regexp"
 	"syscall"
 	"time"
+	"net/http"
 
 	log "github.com/thkukuk/mqtt-exporter/pkg/logger"
+	"github.com/thkukuk/mqtt-exporter/pkg/health"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/influxdb-client-go/v2"
 )
@@ -37,9 +39,10 @@ const (
 )
 
 type ConfigType struct {
-        MQTT            *MQTTConfig     `yaml:"mqtt"`
-	InfluxDB        *InfluxDBConfig `yaml:"influxdb,omitempty"`
-	Metrics         []MetricsType   `yaml:"metrics"`
+	HealthCheckListener *string         `yaml:"health_check,omitempty"`
+        MQTT                *MQTTConfig     `yaml:"mqtt"`
+	InfluxDB            *InfluxDBConfig `yaml:"influxdb,omitempty"`
+	Metrics             []MetricsType   `yaml:"metrics"`
 }
 
 type MQTTConfig struct {
@@ -62,6 +65,7 @@ var (
 	Config ConfigType
 	db influxdb2.Client
 	deviceIDRegex *regexp.Regexp
+	healthstate = health.NewHealthState()
 )
 
 func createMQTTClientID() string {
@@ -129,9 +133,11 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 			}
 		}()
 	}
+	healthstate.IsReady()
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
+	healthstate.NotReady()
 	log.Errorf("Connection to MQTT Broker lost: %v", err)
 }
 
@@ -141,6 +147,8 @@ func RunServer() {
 	}
 
 	var mqtt_client mqtt.Client
+
+	healthstate.DebugMode(Verbose)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
@@ -154,6 +162,16 @@ func RunServer() {
 		}
 		os.Exit(0)
 	}()
+
+	if Config.HealthCheckListener != nil &&
+		len(*Config.HealthCheckListener) > 0 {
+		// Start the state server
+		stateServer := &http.Server{
+			Addr:    *Config.HealthCheckListener,
+			Handler: healthstate,
+		}
+		go stateServer.ListenAndServe()
+	}
 
 	var err error
 	deviceIDRegex, err = regexp.Compile(Config.MQTT.DeviceIDPattern)

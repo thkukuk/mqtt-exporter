@@ -105,6 +105,9 @@ By default `mqtt-exporter` looks for the file `config.yaml` in the local directo
 Here is my configuration file, which I use for my Shelly Plug S.
 
 ```yaml
+# Optional, if set, /healthz liveness probe and /readyz readiness
+# probes will be provided
+#health_check: ":8080"
 mqtt:
   # Required: The MQTT broker to connect to
   broker: <mqtt broker IP>
@@ -245,3 +248,14 @@ spec:
       value: <password>
 ...
 ```
+## Liveness and readiness probes
+
+This liveness and readiness health checks are needed if the service runs in Kubernetes. The livness probe tells kubernetes that the application is alive, if the service does not answer to it, the service will be restarted. The readiness probe tells kubernetes, when the container is ready to serve traffic.
+
+The endpoints are:
+
+* <IP>:<Port>/healthz for the liveness probe
+* <IP>:<Port>/readyz for the readiness probe
+
+
+The **<IP>:<Port>** will be defined with the `health_check` option in the configuration file. If this config variable is not set, the health check stay disabled.

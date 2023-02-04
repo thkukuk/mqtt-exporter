@@ -1,3 +1,6 @@
+# Optional, if set, /healthz liveness probe and /readyz readiness
+# probes will be provided
+#health_check: ":8080"
 mqtt:
   # Required: The MQTT broker to connect to
   broker: mqtt.example.com
