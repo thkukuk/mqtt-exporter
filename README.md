@@ -254,8 +254,8 @@ This liveness and readiness health checks are needed if the service runs in Kube
 
 The endpoints are:
 
-* <IP>:<Port>/healthz for the liveness probe
-* <IP>:<Port>/readyz for the readiness probe
+* *IP:Port*/healthz for the liveness probe
+* *IP:Port*/readyz for the readiness probe
 
 
-The **<IP>:<Port>** will be defined with the `health_check` option in the configuration file. If this config variable is not set, the health check stay disabled.
+The **IP:Port** will be defined with the `health_check` option in the configuration file. If this config variable is not set, the health check stay disabled.
