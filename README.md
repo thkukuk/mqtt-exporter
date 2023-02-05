@@ -2,13 +2,14 @@
 **MQTT Exporter - listens to MQTT topics and forwards them to InfluxDB**
 
 
-This exporter listens to MQTT topics and stores them in an InfluxDB database. It takes the JSON message from the topics and translates this between the MQTT represenation and the format needed for database storage. How this translation is done is specified in the configuration file for mqtt-exporter, as you normally cannot adjust the messages IoT devices send. The IoT devices will push their metrics via MQTT to an MQTT Broker and this exporter subscribes to the broker and processes the rrecived messages.
+This exporter listens to MQTT topics and stores them in an InfluxDB database. It takes the message from the topics (which can be a single value or a JSON struct) and translates it between the MQTT represenation and the format needed for database storage. How this translation is done is specified in the configuration file for mqtt-exporter, as you normally cannot adjust the messages IoT devices send. The IoT devices will push their metrics via MQTT to an MQTT Broker and this exporter subscribes to the broker and processes the rrecived messages.
 
 ```plaintext
  IoT Sensors -> publish -> MQTT Broker <- subcribed <- MQTT-Exporter -> stores -> InfluxDB
  ```
 
 I wrote this exporter initial to export the power metering values of my Shelly Plug S and Shelly Plus H&T devices to an InfluxDB and make them visible in Grafana.
+There is a blog from me which explains how this works in more detail with many example: [Export MQTT Topics to InfluxDB](https://www.thkukuk.de/blog/mqtt-exporter/)
 
 ## Assumptions about Messages and Topics
 
@@ -24,7 +25,7 @@ shellies/shelly-plug-s1/relay/0 on
 shellies/shelly-plug-s1/temperature 22.28
 shellies/shelly-plug-s1/temperature_f 72.10
 shellies/shelly-plug-s1/overtemperature 0
-shelly-ht/shelly-plus-ht-01/events/rpc {"src":"shellyplusht-08b61fce63c4","dst":"shelly-ht/shelly-plus-ht-01/events","method":"NotifyFullStatus","params":{"ts":1674473304.12,"ble":{},"cloud":{"connected":false},"devicepower:0":{"id": 0,"battery":{"V":6.17, "percent":100},"external":{"present":false}},"ht_ui":{},"humidity:0":{"id": 0,"rh":54.3},"mqtt":{"connected":true},"sys":{"mac":"08B61FCE63C4","restart_required":false,"time":null,"unixtime":null,"uptime":1,"ram_size":235504,"ram_free":165340,"fs_size":458752,"fs_free":131072,"cfg_rev":16,"kvs_rev":0,"webhook_rev":0,"available_updates":{},"wakeup_reason":{"boot":"deepsleep_wake","cause":"periodic"},"wakeup_period":7200},"temperature:0":{"id": 0,"tC":19.9, "tF":67.8},"wifi":{"sta_ip":"172.17.0.80","status":"got ip","ssid":"thkukuk","rssi":-70},"ws":{"connected":false}}}
+shelly-ht/shelly-plus-ht-01/events/rpc {"src":"shellyplusht-08b61fce63c4","dst":"shelly-ht/shelly-plus-ht-01/events","method":"NotifyFullStatus","params":{"ts":1674473304.12,"ble":{},"cloud":{"connected":false},"devicepower:0":{"id": 0,"battery":{"V":6.17, "percent":100},"external":{"present":false}},"ht_ui":{},"humidity:0":{"id": 0,"rh":54.3},"mqtt":{"connected":true},"sys":{"mac":"08B61FCE63C4","restart_required":false,"time":null,"unixtime":null,"uptime":1,"ram_size":235504,"ram_free":165340,"fs_size":458752,"fs_free":131072,"cfg_rev":16,"kvs_rev":0,"webhook_rev":0,"available_updates":{},"wakeup_reason":{"boot":"deepsleep_wake","cause":"periodic"},"wakeup_period":7200},"temperature:0":{"id": 0,"tC":19.9, "tF":67.8},"wifi":{"sta_ip":"172.17.0.80","status":"got ip","ssid":"my-wifi","rssi":-70},"ws":{"connected":false}}}
 ```
 
 The device ID, which is used for the `measurement` field when writing the data into the database, is gotten by a regular expression (see `device_id_regex` in the configuration file) from the MQTT topic. This allows an arbitrary place of the device ID in the mqtt topic. For example the tasmota firmware pushes the telemetry data to the topic `tele/<deviceid>/SENSOR`, the Shelly Plug S uses `shellies/<deviceid>/SENSOR` while the Shelly Plus H&T uses `<deviceid>/events/rpc`.
@@ -249,7 +250,7 @@ spec:
 ```
 ## Liveness and readiness probes
 
-This liveness and readiness health checks are needed if the service runs in Kubernetes. The livness probe tells kubernetes that the application is alive, if the service does not answer to it, the service will be restarted. The readiness probe tells kubernetes, when the container is ready to serve traffic.
+This liveness and readiness health checks are needed if the service runs in Kubernetes. The livness probe tells kubernetes that the application is alive, if the service does not answer, the service will be restarted. The readiness probe tells kubernetes, when the container is ready to serve traffic.
 
 The endpoints are:
 
