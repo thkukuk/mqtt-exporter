@@ -40,21 +40,22 @@ const (
 
 type ConfigType struct {
 	HealthCheckListener *string         `yaml:"health_check,omitempty"`
-        MQTT                *MQTTConfig     `yaml:"mqtt"`
+	Verbose             *bool           `yaml:"verbose,omitempty"`
+	MQTT                *MQTTConfig     `yaml:"mqtt"`
 	InfluxDB            *InfluxDBConfig `yaml:"influxdb,omitempty"`
 	Metrics             []MetricsType   `yaml:"metrics"`
 }
 
 type MQTTConfig struct {
-        Broker                 string `yaml:"broker"`
+	Broker                 string `yaml:"broker"`
 	Port                   string `yaml:"port"`
 	Protocol               string `yaml:"protocol"`
-        TopicPaths             []string `yaml:"topic_paths"`
-        DeviceIDPattern        string `yaml:"device_id_regex"`
-        User                   string `yaml:"user"`
-        Password               string `yaml:"password"`
-        ClientID               string `yaml:"client_id"`
-        QoS                    byte   `yaml:"qos"`
+	TopicPaths             []string `yaml:"topic_paths"`
+	DeviceIDPattern        string `yaml:"device_id_regex"`
+	User                   string `yaml:"user"`
+	Password               string `yaml:"password"`
+	ClientID               string `yaml:"client_id"`
+	QoS                    byte   `yaml:"qos"`
 	MetricPerTopicPattern  string `yaml:"metric_per_topic_regex"`
 }
 

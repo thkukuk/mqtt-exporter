@@ -81,6 +81,10 @@ func runMqttExporterCmd(cmd *cobra.Command, args []string) {
 		log.Fatalf("Could not load config: %v", err)
 	}
 
+	if mqttExporter.Config.Verbose != nil {
+		mqttExporter.Verbose = *mqttExporter.Config.Verbose
+	}
+
         mqtt_user := os.Getenv("MQTT_USER")
         if mqtt_user != "" {
                 mqttExporter.Config.MQTT.User = mqtt_user
