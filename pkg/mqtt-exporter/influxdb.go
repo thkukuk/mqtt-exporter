@@ -18,6 +18,7 @@ const (
 type InfluxDBConfig struct {
 	Server       string `yaml:"server"`
 	Port         string `yaml:"port"`
+	Tls          bool `yaml:"tls"`
 	Database     string `yaml:"database"`
 	Organization string `yaml:"organization"`
 	Token        string `yaml:"token,omitempty"`
@@ -88,8 +89,12 @@ func ConnectInfluxDB(config *InfluxDBConfig) (influxdb2.Client, error) {
 	if len(config.Port) == 0 {
 		config.Port = defInfluxDBPort
 	}
-	serverUrl := fmt.Sprintf("http://%s:%s",
-		config.Server, config.Port)
+	protocol := "http"
+	if config.Tls {
+	        protocol = "https"
+	}
+	serverUrl := fmt.Sprintf("%s://%s:%s",
+		protocol, config.Server, config.Port)
 	client := influxdb2.NewClient(serverUrl, config.Token)
 	defer client.Close()
 
