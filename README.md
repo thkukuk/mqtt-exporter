@@ -147,6 +147,8 @@ mqtt:
 influxdb:
   # machine on which influxdb runs on port 8086:
   server: influxdb.example.com
+  # should https be used?
+  # tls: true|false
   # Database or bucket or however it will be called in InfluxDB v3...
   database: shellies
   # Optional for InfluxDB v1.x, required for InfluxDB v2.x.
