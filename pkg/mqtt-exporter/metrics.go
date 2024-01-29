@@ -129,14 +129,16 @@ func msg2dbentry(metrics []MetricsType, msg mqtt.Message) (string, map[string]st
 		} else if metrics[i].Type == "float" {
 			var f float64
 			if f, err = strconv.ParseFloat(payload[:], 64); err != nil {
-				log.Errorf("Cannot convert '%s' to float64: %v", payload, err)
+				log.Errorf("%s: cannot convert '%s' to float64: %v",
+					deviceID, payload, err)
 			} else {
 				field[Config.Metrics[i].Name] = f
 			}
 		} else if metrics[i].Type == "int" || metrics[i].Type == "integer" {
 			var f int64
 			if f, err = strconv.ParseInt(payload[:], 10, 0); err != nil {
-				log.Errorf("Cannot convert '%s' to int64: %v", payload, err)
+				log.Errorf("%s: cannot convert '%s' to int64: %v",
+					deviceID, payload, err)
 			} else {
 				field[metrics[i].Name] = f
 			}

@@ -31,7 +31,7 @@ func WriteEntry(client influxdb2.Client, config InfluxDBConfig, measurement stri
 	// Create go proc for reading and logging errors
 	go func() {
 		for err := range errorsCh {
-			log.Errorf("Write error: %s\n", err.Error())
+			log.Errorf("Write error (%s): %s\n", measurement, err.Error())
 		}
 	}()
 
